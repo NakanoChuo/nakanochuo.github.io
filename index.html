@@ -12,8 +12,9 @@
                 // モデルの読み込み
                 const path = "https://nakanochuo.github.io/mnist_model/model.json";
                 const model = await tf.loadLayersModel(path);
+                return model;
             }
-            run();
+            let a = run();
         </script>
     </body>
 </html>
