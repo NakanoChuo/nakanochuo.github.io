@@ -27,10 +27,10 @@
                     .slice([0, 0, 0, 0], [1, height, width, 1])
                     .reshape([1, height, width]);
                 confident_scores = await model.predict(image);
-                confident_scores.print();
+                return tf.argMax(confident_scores, 1).array();
             }
         </script>
         <button onclick="canvas.clear();">クリア</button>
-        <button onclick="run();">推論</button>
+        <button onclick="run().then(v => {alert(v[0]);});">推論</button>
     </body>
 </html>
