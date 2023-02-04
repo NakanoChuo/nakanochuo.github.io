@@ -4,17 +4,33 @@
         <meta charset="utf-8">
         <title>タイトル</title>
         <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js"></script>
+        <script type="text/javascript" src="canvas.js"></script>
     </head>
     <body>
         こんにちは
+        <canvas id="canvas" width="280" height="280" style="background-color: black;"></canvas>
+        <canvas id="thumbnail" width="28" height="28" style="background-color: black;"></canvas>
         <script>
+            let canvas = new Canvas();
+
             async function run() {
                 // モデルの読み込み
                 const path = "https://nakanochuo.github.io/mnist_model/model.json";
                 const model = await tf.loadLayersModel(path);
-                return model;
+
+                // 推論
+                const thumbnailElem = document.getElementById('thumbnail');
+                const width = thumbnailElem.width;
+                const height = thumbnailElem.height;
+                const image = tf.tensor(Array.from(canvas.getThumbnailImage().data))
+                    .reshape([1, height, width, 4])
+                    .slice([0, 0, 0, 0], [1, height, width, 1])
+                    .reshape([1, height, width]);
+                confident_scores = await model.predict(image);
+                confident_scores.print();
             }
-            let a = run();
         </script>
+        <button onclick="canvas.clear();">クリア</button>
+        <button onclick="run();">推論</button>
     </body>
 </html>
