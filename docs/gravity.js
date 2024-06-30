@@ -12,7 +12,7 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(width, height);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf0f0f0);
+scene.background = new THREE.Color(0x000000);
 
 const camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);    // 視野角、アスペクト比、クリッピング開始距離、終了距離
 camera.position.set(0, 5, 10);
@@ -74,7 +74,7 @@ function* HSL_palette(init_h, s, l) {
     }
 }
 
-let palette = HSL_palette(40, 100, 75);
+let palette = HSL_palette(40, 100, 60);
 let sphere_colors = [];
 let spheres = [];
 for (let i in simulator.masses) {
