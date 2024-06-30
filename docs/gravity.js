@@ -59,7 +59,7 @@ const simulator = new Simulator(
 function* HSL_palette(init_h, s, l) {
     let count = 0;
     let h = init_h;
-    yield [h, s, l];
+    yield new THREE.Color(`hsl(${h}, ${s}%, ${l}%)`);
 
     while (true) {
         let d1 = 120;
@@ -70,7 +70,7 @@ function* HSL_palette(init_h, s, l) {
         if (count % 6 == 0) { d1 = 180 - d2; d2 /= 2; }
         h = (h + d1) % 360;
 
-        yield [h, s, l];
+        yield new THREE.Color(`hsl(${h}, ${s}%, ${l}%)`);
     }
 }
 
@@ -83,7 +83,7 @@ for (let i in simulator.masses) {
     spheres.push(
         new THREE.Mesh(
             new THREE.SphereGeometry(radius),
-            new THREE.MeshToonMaterial({ color: `hsl(${sphere_colors[i][0]}, ${sphere_colors[i][1]}%, ${sphere_colors[i][2]}%)` })
+            new THREE.MeshToonMaterial({ color: sphere_colors[i] })
         )
     );
     scene.add(spheres[spheres.length - 1]);
