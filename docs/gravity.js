@@ -89,7 +89,56 @@ for (let i in simulator.masses) {
     scene.add(spheres[spheres.length - 1]);
 }
 
+let sphere_orbits = [];
+const MAX_POINT_COUNT = 100;
+for  (let i in simulator.masses) {
+    let points = [];
+    for (let j = 0; j < MAX_POINT_COUNT; j++) {
+        points.push(new THREE.Vector3());
+    }
+
+    let vertex_colors = [];
+    for (let j = 0; j < MAX_POINT_COUNT; j++) {
+        vertex_colors.push(sphere_colors[i].r, sphere_colors[i].g, sphere_colors[i].b, 1 / MAX_POINT_COUNT * j);
+    }
+
+    let geometry = new THREE.BufferGeometry().setFromPoints(points);
+    geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( vertex_colors, 4 ) );
+    geometry.setDrawRange(0, 0);
+    sphere_orbits.push(
+        new THREE.Line(
+            geometry,
+            new THREE.LineBasicMaterial({
+                vertexColors: true,
+                transparent: true,
+            })
+        )
+    );
+
+    scene.add(sphere_orbits[sphere_orbits.length - 1]);
+}
+
+// 軌道に点を追加
+function addOrbitPoint(orbit, point, index) {
+    let positions = orbit.geometry.attributes.position.array;
+
+    for (let i = 0; i < MAX_POINT_COUNT - 1; i++) {
+        positions[i * 3 + 0] = positions[(i + 1) * 3 + 0];
+        positions[i * 3 + 1] = positions[(i + 1) * 3 + 1];
+        positions[i * 3 + 2] = positions[(i + 1) * 3 + 2];
+    }
+    positions[(MAX_POINT_COUNT - 1) * 3 + 0] = point[0];
+    positions[(MAX_POINT_COUNT - 1) * 3 + 1] = point[1];
+    positions[(MAX_POINT_COUNT - 1) * 3 + 2] = point[2];
+
+    if (index < MAX_POINT_COUNT) {
+        orbit.geometry.setDrawRange(MAX_POINT_COUNT - index - 1, index + 1);
+    }
+    orbit.geometry.attributes.position.needsUpdate = true;
+}
+
 let t = 0;
+let count = 0;
 
 // 毎フレーム時に実行されるループイベント
 function tick() {
@@ -98,9 +147,18 @@ function tick() {
     for (let i = 0; i < 1; i++) {
         [t, positions] = simulator.calc_positions();
     }
+
     for (let i in simulator.masses) {
         spheres[i].position.set(...positions[i]);
     }
+
+    const DRAW_POINT_INTERVAL = 4;
+    if (count % DRAW_POINT_INTERVAL == 0) {
+        for (let i in simulator.masses) {
+            addOrbitPoint(sphere_orbits[i], positions[i], Math.round(count / DRAW_POINT_INTERVAL));
+        }
+    }
+    count++;
 
     controls.update();
     renderer.render(scene, camera);
