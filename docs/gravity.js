@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { Simulator } from "./scripts/gravity_simulator.js";
-import { HSV_palette } from "./scripts/color.js";
 
 const canvas = document.querySelector('#myCanvas');
 const width = 960;
@@ -57,7 +56,25 @@ const simulator = new Simulator(
     [[0, -4, 5], [8, -8, -4], [0, 8, 0], [0, 0, 0]]       // 初速度
 );
 
-let palette = HSV_palette(40, 50, 100);
+function* HSL_palette(init_h, s, l) {
+    let count = 0;
+    let h = init_h;
+    yield [h, s, l];
+
+    while (true) {
+        let d1 = 120;
+        let d2 = 30;
+
+        count++;
+        if (count % 3 == 0) { d1 = 180; }
+        if (count % 6 == 0) { d1 = 180 - d2; d2 /= 2; }
+        h = (h + d1) % 360;
+
+        yield [h, s, l];
+    }
+}
+
+let palette = HSL_palette(40, 100, 75);
 let sphere_colors = [];
 let spheres = [];
 for (let i in simulator.masses) {
@@ -66,7 +83,7 @@ for (let i in simulator.masses) {
     spheres.push(
         new THREE.Mesh(
             new THREE.SphereGeometry(radius),
-            new THREE.MeshToonMaterial({ color: sphere_colors[i].toRGB() })
+            new THREE.MeshToonMaterial({ color: `hsl(${sphere_colors[i][0]}, ${sphere_colors[i][1]}%, ${sphere_colors[i][2]}%)` })
         )
     );
     scene.add(spheres[spheres.length - 1]);
