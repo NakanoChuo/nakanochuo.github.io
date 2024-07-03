@@ -1,7 +1,10 @@
 import { RK4 } from "./RK4.js"
 
 export class Simulator {
-    constructor(deltaT, masses, initPositions, initVelocities) {
+    static get G() { return 1; }            // 万有引力定数 [m^3 / kg /s^2]
+    static get deltaT() { return 0.01; }    // 時間幅 [s]
+
+    constructor(masses, initPositions, initVelocities) {
         this.masses = masses;                                   // 質量 [kg]
         this.initPosMatrix = math.matrix(initPositions);     // 初期位置 [m]
         this.initVelMatrix = math.matrix(initVelocities);    // 初速度 [m/s]
@@ -19,15 +22,13 @@ export class Simulator {
         let gravityVel = math.divide(math.sum(math.dotMultiply(this.initVelMatrix, math.matrix(masses).reshape([masses.length, 1])), 0), math.sum(masses));
         this.initVelMatrix = math.subtract(this.initVelMatrix, gravityVel);
 
-        this.G = 1; // 万有引力定数 [m^3 / kg / s^2]
-
         this.RK4iter = RK4(
             (t, posVelMatrix) => {
                 let posMatrix = posVelMatrix.subset(math.index(0, math.range(0, masses.length), [0, 1, 2])).reshape([masses.length, 3]);
                 let velMatrix = posVelMatrix.subset(math.index(1, math.range(0, masses.length), [0, 1, 2])).reshape([masses.length, 3]);
                 return math.matrix(this.calcDerivatives(posMatrix, velMatrix));
             },
-            deltaT,
+            Simulator.deltaT,
             math.matrix([this.initPosMatrix, this.initVelMatrix])
         );
     }
@@ -66,7 +67,7 @@ export class Simulator {
                     let pos1 = posMatrix.subset(math.index(i, [0, 1, 2])).reshape([3]);
                     let pos2 = posMatrix.subset(math.index(j, [0, 1, 2])).reshape([3]);
                     let vec = math.subtract(pos1, pos2);
-                    let acc = math.multiply(vec, -this.G * this.masses[j] / math.norm(vec) ** 3)
+                    let acc = math.multiply(vec, -Simulator.G * this.masses[j] / math.norm(vec) ** 3)
     
                     accMatrix.subset(math.index(i, j, [0, 1, 2]), acc);
                 }
