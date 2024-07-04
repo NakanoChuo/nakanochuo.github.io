@@ -130,20 +130,20 @@ class Orbit {
 
 const simulators = [
     new Simulator(
-        [2, 10],
+        [160, 400],
         [
-            [-4 / Math.sqrt(2), 0, -4 / Math.sqrt(2)],
-            [4 / Math.sqrt(2), 0, 4 / Math.sqrt(2)],
+            [-5 / Math.sqrt(2), 0, -5 / Math.sqrt(2)],
+            [5 / Math.sqrt(2), 0, 5 / Math.sqrt(2)],
         ],
         [
-            [-1 / Math.sqrt(2) / 2, 0, 1 / Math.sqrt(2) / 2],
-            [1 / Math.sqrt(2) / 4, 0, -1 / Math.sqrt(2) / 4],
+            [-2 / Math.sqrt(2), 0, 2 / Math.sqrt(2)],
+            [3 / Math.sqrt(2), 0, -3 / Math.sqrt(2)],
         ]
     ),
     new Simulator(
-        [5.95, 3.05, 4.95],
-        [[1, 3, 0], [-2, -1, 0], [1, -1, 0]],
-        [[0, 0, 1], [0, 0, -1], [0, 0, 0]]
+        [95, 100, 50],
+        [[2, 6, 0], [-2, -1, 0], [1, -1, 0]],
+        [[0, 0, 1], [1, 0, -4], [0, 0, 0]]
     ),
     new Simulator(
         [25, 3, 4, 500],
