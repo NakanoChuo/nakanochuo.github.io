@@ -21,16 +21,18 @@ export class Simulator {
         // 重心速度
         let gravityVel = math.divide(math.sum(math.dotMultiply(this.initVelMatrix, math.matrix(masses).reshape([masses.length, 1])), 0), math.sum(masses));
         this.initVelMatrix = math.subtract(this.initVelMatrix, gravityVel);
+    }
 
+    reset() {
         this.RK4iter = RK4(
             (t, posVelMatrix) => {
-                let posMatrix = posVelMatrix.subset(math.index(0, math.range(0, masses.length), [0, 1, 2])).reshape([masses.length, 3]);
-                let velMatrix = posVelMatrix.subset(math.index(1, math.range(0, masses.length), [0, 1, 2])).reshape([masses.length, 3]);
+                let posMatrix = posVelMatrix.subset(math.index(0, math.range(0, this.masses.length), [0, 1, 2])).reshape([this.masses.length, 3]);
+                let velMatrix = posVelMatrix.subset(math.index(1, math.range(0, this.masses.length), [0, 1, 2])).reshape([this.masses.length, 3]);
                 return math.matrix(this.calcDerivatives(posMatrix, velMatrix));
             },
             Simulator.deltaT,
             math.matrix([this.initPosMatrix, this.initVelMatrix])
-        );
+        );        
     }
 
     calcPositions() {

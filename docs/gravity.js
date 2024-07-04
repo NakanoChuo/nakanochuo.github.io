@@ -31,30 +31,6 @@ const light = new THREE.DirectionalLight(0xFFFFFF, 4);
 light.position.set(1, 1, 1);
 scene.add(light);
 
-// const simulator = new Simulator(
-//     0.01,
-//     [2, 10],
-//     [
-//         [-4 / Math.sqrt(2), 0, -4 / Math.sqrt(2)],
-//         [4 / Math.sqrt(2), 0, 4 / Math.sqrt(2)],
-//     ],
-//     [
-//         [-1 / Math.sqrt(2) / 2, 0, 1 / Math.sqrt(2) / 2],
-//         [1 / Math.sqrt(2) / 4, 0, -1 / Math.sqrt(2) / 4],
-//     ]
-// )
-// const simulator = new Simulator(
-//     0.01,                                 // 時間幅
-//     [5.95, 3.05, 4.95],                              // 質量
-//     [[1, 3, 0], [-2, -1, 0], [1, -1, 0]],   // 初期位置
-//     [[0, 0, 1], [0, 0, -1], [0, 0, 0]]       // 初速度
-// );
-const simulator = new Simulator(
-    [25, 3, 4, 500],                              // 質量
-    [[5, 7, 0], [-4, -2, 0], [5, -2, 0], [0, 0, 0]],   // 初期位置
-    [[0, -4, 5], [8, -8, -4], [0, 8, 0], [0, 0, 0]]       // 初速度
-);
-
 function* HslPalette(initH, s, l) {
     let count = 0;
     let h = initH;
@@ -75,14 +51,21 @@ function* HslPalette(initH, s, l) {
 
 class Planet {
     constructor(scene, color, radius) {
-        this.geometry = new THREE.SphereGeometry(radius);
-        this.material = new THREE.MeshToonMaterial({ color: color });
-        this.mesh = new THREE.Mesh(this.geometry, this.material);
+        let geometry = new THREE.SphereGeometry(radius);
+        let material = new THREE.MeshToonMaterial({ color: color });
+        this.mesh = new THREE.Mesh(geometry, material);
         scene.add(this.mesh);
 
         this.orbit = new Orbit(scene, color);
 
         this.setPositionCount = 0;
+    }
+
+    removeFromScene(scene) {
+        scene.remove(this.mesh);
+        this.mesh.geometry.dispose();
+        this.mesh.material.dispose();
+        this.orbit.removeFromScene(scene);
     }
 
     setPosition(position) {
@@ -107,20 +90,26 @@ class Orbit {
             vertexColors.push(color.r, color.g, color.b, 1 / Orbit.MAX_POINT_COUNT * i);
         }
 
-        this.geometry = new THREE.BufferGeometry().setFromPoints(points);
-        this.geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 4));
-        this.geometry.setDrawRange(0, 0);
+        let geometry = new THREE.BufferGeometry().setFromPoints(points);
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 4));
+        geometry.setDrawRange(0, 0);
 
-        this.material = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true });
+        let material = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true });
 
-        this.line = new THREE.Line(this.geometry, this.material);
+        this.line = new THREE.Line(geometry, material);
         scene.add(this.line);
 
         this.pointCount = 0;
     }
 
+    removeFromScene(scene) {
+        scene.remove(this.line);
+        this.line.geometry.dispose();
+        this.line.material.dispose();
+    }
+
     addPoint(position) {
-        let positions = this.geometry.attributes.position.array;
+        let positions = this.line.geometry.attributes.position.array;
 
         for (let i = 0; i < Orbit.MAX_POINT_COUNT - 1; i++) {
             positions[i * 3 + 0] = positions[(i + 1) * 3 + 0];
@@ -133,34 +122,52 @@ class Orbit {
 
         this.pointCount++;
         if (this.pointCount <= Orbit.MAX_POINT_COUNT) {
-            this.geometry.setDrawRange(Orbit.MAX_POINT_COUNT - this.pointCount, this.pointCount);
+            this.line.geometry.setDrawRange(Orbit.MAX_POINT_COUNT - this.pointCount, this.pointCount);
         }
-        this.geometry.attributes.position.needsUpdate = true;
+        this.line.geometry.attributes.position.needsUpdate = true;
     }
 }
 
-let palette = HslPalette(40, 100, 60);
-let planets = [];
-for (let mass of simulator.masses) {
-    planets.push(new Planet(
-        scene,
-        palette.next()['value'],
-        0.3 * Math.cbrt(mass / Math.min(...simulator.masses))
-    ));
-}
+const simulators = [
+    new Simulator(
+        [2, 10],
+        [
+            [-4 / Math.sqrt(2), 0, -4 / Math.sqrt(2)],
+            [4 / Math.sqrt(2), 0, 4 / Math.sqrt(2)],
+        ],
+        [
+            [-1 / Math.sqrt(2) / 2, 0, 1 / Math.sqrt(2) / 2],
+            [1 / Math.sqrt(2) / 4, 0, -1 / Math.sqrt(2) / 4],
+        ]
+    ),
+    new Simulator(
+        [5.95, 3.05, 4.95],
+        [[1, 3, 0], [-2, -1, 0], [1, -1, 0]],
+        [[0, 0, 1], [0, 0, -1], [0, 0, 0]]
+    ),
+    new Simulator(
+        [25, 3, 4, 500],
+        [[5, 7, 0], [-4, -2, 0], [5, -2, 0], [0, 0, 0]],
+        [[0, -4, 5], [8, -8, -4], [0, 8, 0], [0, 0, 0]]
+    )
+];
 
-let t = 0;
+let simulator;
+let planets = [];
+let isRunning = false;
 
 // 毎フレーム時に実行されるループイベント
 function tick() {
-    let positions;
+    let positions, t;
 
-    for (let i = 0; i < 1; i++) {
-        [t, positions] = simulator.calcPositions();
-    }
-
-    for (let i in simulator.masses) {
-        planets[i].setPosition(positions[i]);
+    if (isRunning) {
+        for (let i = 0; i < 1; i++) {
+            [t, positions] = simulator.calcPositions();
+        }
+    
+        for (let i in simulator.masses) {
+            planets[i].setPosition(positions[i]);
+        }
     }
 
     controls.update();
@@ -168,4 +175,34 @@ function tick() {
 
     requestAnimationFrame(tick);
 }
+
+function startSimulation(simulatorId) {
+    simulator = simulators[simulatorId];
+    simulator.reset();
+    
+    let palette = HslPalette(40, 100, 60);
+    for (let mass of simulator.masses) {
+        planets.push(new Planet(
+            scene,
+            palette.next()['value'],
+            0.3 * Math.cbrt(mass / Math.min(...simulator.masses))
+        ));
+    }
+
+    isRunning = true;
+}
+
+function endSimulation() {
+    isRunning = false;
+
+    while (planets.length > 0) {
+        let planet = planets.shift();
+        planet.removeFromScene(scene);
+    }
+}
+
+document.querySelector('#sample0').addEventListener('click', e => { endSimulation(); startSimulation(0); });
+document.querySelector('#sample1').addEventListener('click', e => { endSimulation(); startSimulation(1); });
+document.querySelector('#sample2').addEventListener('click', e => { endSimulation(); startSimulation(2); });
+startSimulation(0);
 tick();
