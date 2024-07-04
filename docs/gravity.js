@@ -201,8 +201,13 @@ function endSimulation() {
     }
 }
 
+function pauseAndRestartSimulation() {
+    isRunning = !isRunning;
+}
+
 document.querySelector('#sample0').addEventListener('click', e => { endSimulation(); startSimulation(0); });
 document.querySelector('#sample1').addEventListener('click', e => { endSimulation(); startSimulation(1); });
 document.querySelector('#sample2').addEventListener('click', e => { endSimulation(); startSimulation(2); });
+document.querySelector('#pauseAndRestart').addEventListener('click', e => { pauseAndRestartSimulation(); });
 startSimulation(0);
 tick();
