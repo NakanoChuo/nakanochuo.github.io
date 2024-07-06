@@ -51,8 +51,8 @@ function* HslPalette(initH, s, l) {
 
 class Planet {
     constructor(scene, color, radius) {
-        let geometry = new THREE.SphereGeometry(radius);
-        let material = new THREE.MeshToonMaterial({ color: color });
+        const geometry = new THREE.SphereGeometry(radius);
+        const material = new THREE.MeshToonMaterial({ color: color });
         this.mesh = new THREE.Mesh(geometry, material);
         scene.add(this.mesh);
 
@@ -83,18 +83,18 @@ class Orbit {
     static get MAX_POINT_COUNT() { return 100; }
 
     constructor(scene, color) {
-        let points = [];
-        let vertexColors = [];
+        const points = [];
+        const vertexColors = [];
         for (let i = 0; i < Orbit.MAX_POINT_COUNT; i++) {
             points.push(new THREE.Vector3());
             vertexColors.push(color.r, color.g, color.b, 1 / Orbit.MAX_POINT_COUNT * i);
         }
 
-        let geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
         geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 4));
         geometry.setDrawRange(0, 0);
 
-        let material = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true });
+        const material = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true });
 
         this.line = new THREE.Line(geometry, material);
         scene.add(this.line);
@@ -109,7 +109,7 @@ class Orbit {
     }
 
     addPoint(position) {
-        let positions = this.line.geometry.attributes.position.array;
+        const positions = this.line.geometry.attributes.position.array;
 
         for (let i = 0; i < Orbit.MAX_POINT_COUNT - 1; i++) {
             positions[i * 3 + 0] = positions[(i + 1) * 3 + 0];
@@ -153,7 +153,7 @@ const simulators = [
 ];
 
 let simulator;
-let planets = [];
+const planets = [];
 let isRunning = false;
 
 // 毎フレーム時に実行されるループイベント
@@ -180,7 +180,7 @@ function startSimulation(simulatorId) {
     simulator = simulators[simulatorId];
     simulator.reset();
     
-    let palette = HslPalette(40, 100, 60);
+    const palette = HslPalette(40, 100, 60);
     for (let mass of simulator.masses) {
         planets.push(new Planet(
             scene,
