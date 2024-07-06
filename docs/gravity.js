@@ -1,5 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 
 import { Simulator } from "./scripts/gravity_simulator.js";
 
@@ -31,6 +34,12 @@ const light = new THREE.DirectionalLight(0xFFFFFF, 4);
 light.position.set(1, 1, 1);
 scene.add(light);
 
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, camera);
+const outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
+composer.addPass(renderPass);
+composer.addPass(outlinePass);
+
 function* HslPalette(initH, s, l) {
     let count = 0;
     let h = initH;
@@ -50,10 +59,11 @@ function* HslPalette(initH, s, l) {
 }
 
 class Planet {
-    constructor(scene, color, radius) {
+    constructor(scene, color, radius, name) {
         const geometry = new THREE.SphereGeometry(radius);
         const material = new THREE.MeshToonMaterial({ color: color });
         this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.name = name;
         scene.add(this.mesh);
 
         this.orbit = new Orbit(scene, color);
@@ -154,6 +164,7 @@ const simulators = [
 
 let simulator;
 const planets = [];
+const planetMeshes = [];
 let isRunning = false;
 
 // 毎フレーム時に実行されるループイベント
@@ -171,7 +182,7 @@ function tick() {
     }
 
     controls.update();
-    renderer.render(scene, camera);
+    composer.render();
 
     requestAnimationFrame(tick);
 }
@@ -181,12 +192,14 @@ function startSimulation(simulatorId) {
     simulator.reset();
     
     const palette = HslPalette(40, 100, 60);
-    for (let mass of simulator.masses) {
+    for (let i in simulator.masses) {
         planets.push(new Planet(
             scene,
             palette.next()['value'],
-            0.3 * Math.cbrt(mass / Math.min(...simulator.masses))
+            0.3 * Math.cbrt(simulator.masses[i] / Math.min(...simulator.masses)),
+            `planet${i}`
         ));
+        planetMeshes.push(planets[planets.length - 1].mesh);
     }
 
     isRunning = true;
@@ -198,6 +211,7 @@ function endSimulation() {
     while (planets.length > 0) {
         let planet = planets.shift();
         planet.removeFromScene(scene);
+        planetMeshes.shift();
     }
 }
 
@@ -205,9 +219,45 @@ function pauseAndRestartSimulation() {
     isRunning = !isRunning;
 }
 
+const mouse = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+
+function onPointerMove(event) {
+    if (!event.isPrimary) { return; }
+
+    const element = event.currentTarget;
+
+    // canvas要素上のXY座標
+    const x = event.clientX - element.offsetLeft;
+    const y = event.clientY - element.offsetTop;
+
+    // canvas要素の幅・高さ
+    const w = element.offsetWidth;
+    const h = element.offsetHeight;
+
+    mouse.x = (x / w) * 2 - 1
+    mouse.y = -(y / h) * 2 + 1;
+
+    checkIntersection();
+}
+
+function checkIntersection() {
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(planetMeshes, true);
+
+    if (intersects.length > 0) {
+        const selectedObject = intersects[0].object;
+        console.log(selectedObject.name);
+        outlinePass.selectedObjects = [selectedObject];
+    }
+}
+
 document.querySelector('#sample0').addEventListener('click', e => { endSimulation(); startSimulation(0); });
 document.querySelector('#sample1').addEventListener('click', e => { endSimulation(); startSimulation(1); });
 document.querySelector('#sample2').addEventListener('click', e => { endSimulation(); startSimulation(2); });
 document.querySelector('#pauseAndRestart').addEventListener('click', e => { pauseAndRestartSimulation(); });
+
+canvas.addEventListener('pointermove', onPointerMove);
+
 startSimulation(0);
 tick();
