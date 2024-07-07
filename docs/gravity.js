@@ -120,15 +120,19 @@ function* HslPalette(initH, s, l) {
     let h = initH;
     yield new THREE.Color(`hsl(${h}, ${s}%, ${l}%)`);
 
+    let d1 = 60;
+    let d2 = 120;
     while (true) {
-        let d1 = 120;
-        let d2 = 30;
-
         count++;
-        if (count % 3 == 0) { d1 = 180; }
-        if (count % 6 == 0) { d1 = 180 - d2; d2 /= 2; }
-        h = (h + d1) % 360;
-
+        if (count % 3 != 0 ) { h = (h + 120) % 360; }
+        else {
+            h = (initH + d1) % 360;
+            d1 += d2;
+            if (d1 >= 120) {
+                d2 /= 2;
+                d1 = d2 / 2;
+            }
+        }
         yield new THREE.Color(`hsl(${h}, ${s}%, ${l}%)`);
     }
 }
