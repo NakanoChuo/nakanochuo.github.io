@@ -6,39 +6,114 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 
 import { Simulator } from "./scripts/gravity_simulator.js";
 
-const canvas = document.querySelector('#myCanvas');
-const width = 960;
-const height = 540;
+class Screen {
+    constructor(width, height) {
+        this.canvas = document.querySelector('#myCanvas');
+        this.width = width;
+        this.height = height;
 
-const renderer = new THREE.WebGLRenderer({ canvas: canvas });
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(width, height);
+        this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setSize(this.width, this.height);
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x000000);  // 背景色
 
-const camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);    // 視野角、アスペクト比、クリッピング開始距離、終了距離
-camera.position.set(0, 5, 10);
-camera.lookAt(scene.position);
+        this.camera = new THREE.PerspectiveCamera(45, this.width / this.height, 1, 1000);   // 視野角、アスペクト比、クリッピング開始距離、終了距離
+        this.camera.position.set(0, 5, 10); // カメラ位置
+        this.camera.lookAt(this.scene.position);    // 注視点を座標原点に
 
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;  // 滑らかにカメラコントローラを制御する
-controls.dampingFactor = 0.2;
+        this.controls = new OrbitControls(this.camera, this.canvas);
+        this.controls.enableDamping = true;  // 滑らかにカメラコントローラを制御する
+        this.controls.dampingFactor = 0.2;
 
-const grid = new THREE.GridHelper(20, 10);
-grid.material.opacity = 0.5;
-grid.material.transparent = true;
-scene.add(grid);
+        this.light = new THREE.DirectionalLight(0xFFFFFF, 4);
+        this.light.position.set(1, 1, 1);
+        this.scene.add(this.light);
 
-const light = new THREE.DirectionalLight(0xFFFFFF, 4);
-light.position.set(1, 1, 1);
-scene.add(light);
+        this.composer = new EffectComposer(this.renderer);
+        this.renderPass = new RenderPass(this.scene, this.camera);
+        this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
+        this.composer.addPass(this.renderPass);
+        this.composer.addPass(this.outlinePass);
 
-const composer = new EffectComposer(renderer);
-const renderPass = new RenderPass(scene, camera);
-const outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
-composer.addPass(renderPass);
-composer.addPass(outlinePass);
+        // グリッドの表示
+        this.grid = new THREE.GridHelper(20, 10);   // 全体のサイズとマス数
+        this.grid.material.opacity = 0.5;   // 透明度
+        this.grid.material.transparent = true;
+        this.scene.add(this.grid);
+
+        // シーンに表示する天体
+        this.planets = [];
+
+        // シミュレーション
+        this.simulationControler = new SimulationControler(this);
+
+        // 入力イベント
+        this.canvas.addEventListener('pointermove', (e) => { this.onPointerMove(e); });
+        for (let i = 0; i < 3; i++) {
+            document.querySelector(`#sample${i}`).addEventListener('click', (e) => { this.simulationControler.end(); this.simulationControler.start(i); });
+        }
+        document.querySelector('#pauseAndRestart').addEventListener('click', (e) => { this.simulationControler.pauseAndRestart(); });
+    }
+
+    addPlanet = (() => {
+        const palette = HslPalette(40, 100, 60);
+
+        return (size, name) => {
+            this.planets.push(new Planet(this.scene, palette.next()['value'], size, name));
+        }
+    })();
+
+    removePlanet() {
+        const planet = this.planets.shift();
+        planet.removeFromScene(this.scene);
+    }
+
+    update() {
+        if (this.simulationControler.isRunning) {
+            const [t, positions] = this.simulationControler.update();
+            for (let i in this.planets) {
+                this.planets[i].setPosition(positions[i]);
+            }
+        }
+    
+        this.controls.update();
+        this.composer.render();
+    
+        requestAnimationFrame(this.update.bind(this));
+    }
+    
+    onPointerMove(event) {
+        if (!event.isPrimary) { return; }
+        
+        const element = event.currentTarget;
+        
+        // canvas要素上のXY座標
+        const x = event.clientX - element.offsetLeft;
+        const y = event.clientY - element.offsetTop;
+        
+        // canvas要素の幅・高さ
+        const w = element.offsetWidth;
+        const h = element.offsetHeight;
+        
+        this.checkIntersection((x / w) * 2 - 1, -(y / h) * 2 + 1);
+    }
+    
+    checkIntersection(x, y) {
+        const planetMeshes = this.planets.map((planet) => planet.mesh);
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
+        const intersects = raycaster.intersectObjects(planetMeshes, true);
+    
+        if (intersects.length > 0) {
+            const selectedObject = intersects[0].object;
+            console.log(selectedObject.name);
+            this.outlinePass.selectedObjects = [selectedObject];
+        }
+    }
+}
 
 function* HslPalette(initH, s, l) {
     let count = 0;
@@ -138,126 +213,64 @@ class Orbit {
     }
 }
 
-const simulators = [
-    new Simulator(
-        [160, 400],
-        [
-            [-5 / Math.sqrt(2), 0, -5 / Math.sqrt(2)],
-            [5 / Math.sqrt(2), 0, 5 / Math.sqrt(2)],
-        ],
-        [
-            [-2 / Math.sqrt(2), 0, 2 / Math.sqrt(2)],
-            [3 / Math.sqrt(2), 0, -3 / Math.sqrt(2)],
-        ]
-    ),
-    new Simulator(
-        [95, 100, 50],
-        [[2, 6, 0], [-2, -1, 0], [1, -1, 0]],
-        [[0, 0, 1], [1, 0, -4], [0, 0, 0]]
-    ),
-    new Simulator(
-        [25, 3, 4, 500],
-        [[5, 7, 0], [-4, -2, 0], [5, -2, 0], [0, 0, 0]],
-        [[0, -4, 5], [8, -8, -4], [0, 8, 0], [0, 0, 0]]
-    )
-];
+class SimulationControler {
+    simulators = [
+        new Simulator(
+            [160, 400],
+            [
+                [-5 / Math.sqrt(2), 0, -5 / Math.sqrt(2)],
+                [5 / Math.sqrt(2), 0, 5 / Math.sqrt(2)],
+            ],
+            [
+                [-2 / Math.sqrt(2), 0, 2 / Math.sqrt(2)],
+                [3 / Math.sqrt(2), 0, -3 / Math.sqrt(2)],
+            ]
+        ),
+        new Simulator(
+            [95, 100, 50],
+            [[2, 6, 0], [-2, -1, 0], [1, -1, 0]],
+            [[0, 0, 1], [1, 0, -4], [0, 0, 0]]
+        ),
+        new Simulator(
+            [25, 3, 4, 500],
+            [[5, 7, 0], [-4, -2, 0], [5, -2, 0], [0, 0, 0]],
+            [[0, -4, 5], [8, -8, -4], [0, 8, 0], [0, 0, 0]]
+        )
+    ];
 
-let simulator;
-const planets = [];
-const planetMeshes = [];
-let isRunning = false;
+    constructor(screen) {
+        this.screen = screen;
+        this.start(0);
+    }
 
-// 毎フレーム時に実行されるループイベント
-function tick() {
-    let positions, t;
+    start(simulatorId) {
+        this.simulator = this.simulators[simulatorId];
+        this.simulator.reset();
 
-    if (isRunning) {
-        for (let i = 0; i < 1; i++) {
-            [t, positions] = simulator.calcPositions();
+        for (let i in this.simulator.masses) {
+            this.screen.addPlanet(0.3 * Math.cbrt(this.simulator.masses[i] / Math.min(...this.simulator.masses)), `planet${i}`);
         }
-    
-        for (let i in simulator.masses) {
-            planets[i].setPosition(positions[i]);
+
+        this.isRunning = true;
+    }
+
+    end() {
+        this.isRunning = false;
+
+        for (let i in this.simulator.masses) {
+            this.screen.removePlanet();
         }
     }
 
-    controls.update();
-    composer.render();
-
-    requestAnimationFrame(tick);
-}
-
-function startSimulation(simulatorId) {
-    simulator = simulators[simulatorId];
-    simulator.reset();
-    
-    const palette = HslPalette(40, 100, 60);
-    for (let i in simulator.masses) {
-        planets.push(new Planet(
-            scene,
-            palette.next()['value'],
-            0.3 * Math.cbrt(simulator.masses[i] / Math.min(...simulator.masses)),
-            `planet${i}`
-        ));
-        planetMeshes.push(planets[planets.length - 1].mesh);
+    pauseAndRestart() {
+        this.isRunning = !this.isRunning;
     }
 
-    isRunning = true;
-}
-
-function endSimulation() {
-    isRunning = false;
-
-    while (planets.length > 0) {
-        let planet = planets.shift();
-        planet.removeFromScene(scene);
-        planetMeshes.shift();
+    update() {
+        if (!this.isRunning) { return; }
+        return this.simulator.calcPositions();
     }
 }
 
-function pauseAndRestartSimulation() {
-    isRunning = !isRunning;
-}
-
-const mouse = new THREE.Vector2();
-const raycaster = new THREE.Raycaster();
-
-function onPointerMove(event) {
-    if (!event.isPrimary) { return; }
-
-    const element = event.currentTarget;
-
-    // canvas要素上のXY座標
-    const x = event.clientX - element.offsetLeft;
-    const y = event.clientY - element.offsetTop;
-
-    // canvas要素の幅・高さ
-    const w = element.offsetWidth;
-    const h = element.offsetHeight;
-
-    mouse.x = (x / w) * 2 - 1
-    mouse.y = -(y / h) * 2 + 1;
-
-    checkIntersection();
-}
-
-function checkIntersection() {
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(planetMeshes, true);
-
-    if (intersects.length > 0) {
-        const selectedObject = intersects[0].object;
-        console.log(selectedObject.name);
-        outlinePass.selectedObjects = [selectedObject];
-    }
-}
-
-document.querySelector('#sample0').addEventListener('click', e => { endSimulation(); startSimulation(0); });
-document.querySelector('#sample1').addEventListener('click', e => { endSimulation(); startSimulation(1); });
-document.querySelector('#sample2').addEventListener('click', e => { endSimulation(); startSimulation(2); });
-document.querySelector('#pauseAndRestart').addEventListener('click', e => { pauseAndRestartSimulation(); });
-
-canvas.addEventListener('pointermove', onPointerMove);
-
-startSimulation(0);
-tick();
+const screen = new Screen(960, 540);
+screen.update();
