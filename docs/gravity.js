@@ -51,11 +51,11 @@ class Screen {
         this.simulationControler = new SimulationControler(this);
 
         // 入力イベント
-        this.canvas.addEventListener('pointermove', (e) => { this.onPointerMove(e); });
+        this.canvas.addEventListener('pointermove', (e) => { this.onPointerMove(e); }); // 画面上でポインタを動かす
         for (let i = 0; i < 3; i++) {
-            document.querySelector(`#sample${i}`).addEventListener('click', (e) => { this.switchSimulation(i); });
+            document.querySelector(`#sample${i}`).addEventListener('click', (e) => { this.switchSimulation(i); });  // シミュレーションのサンプルの切り替えボタン
         }
-        document.querySelector('#pauseAndRestart').addEventListener('click', (e) => { this.simulationControler.pauseAndRestart(); });
+        document.querySelector('#pauseAndRestart').addEventListener('click', (e) => { this.simulationControler.pauseAndRestart(); });   // シミュレーションの停止／再開ボタン
 
         this.switchSimulation(0);
     }
@@ -69,6 +69,7 @@ class Screen {
         planet.removeFromScene(this.scene);
     }
 
+    // 画面更新
     update() {
         if (this.simulationControler.isRunning) {
             const [t, positions] = this.simulationControler.update();
@@ -79,10 +80,9 @@ class Screen {
     
         this.controls.update();
         this.composer.render();
-    
-        requestAnimationFrame(this.update.bind(this));
     }
 
+    // シミュレーションのサンプルの切り替え
     switchSimulation(simulatorId) {        
         this.simulationControler.end();
         this.planetPalette = HslPalette(60, 100, 60);
@@ -101,11 +101,16 @@ class Screen {
         // canvas要素の幅・高さ
         const w = element.offsetWidth;
         const h = element.offsetHeight;
-        
-        this.checkIntersection((x / w) * 2 - 1, -(y / h) * 2 + 1);
+
+        const intersectedPlanet = this.checkPlanetIntersection((x / w) * 2 - 1, -(y / h) * 2 + 1);  // ポインタ上に天体があるか調べる
+        if (intersectedPlanet !== undefined) {  // ポインタ上に天体がある場合
+            console.log(intersectedPlanet.name);
+            this.outlinePass.selectedObjects = [intersectedPlanet]; // アウトラインを表示する
+        }
     }
-    
-    checkIntersection(x, y) {
+
+    // 画面上のx, y座標上に天体があるかどうか
+    checkPlanetIntersection(x, y) {
         const planetMeshes = this.planets.map((planet) => planet.mesh);
 
         const raycaster = new THREE.Raycaster();
@@ -113,13 +118,12 @@ class Screen {
         const intersects = raycaster.intersectObjects(planetMeshes, true);
     
         if (intersects.length > 0) {
-            const selectedObject = intersects[0].object;
-            console.log(selectedObject.name);
-            this.outlinePass.selectedObjects = [selectedObject];
+            return intersects[0].object;
         }
     }
 }
 
+// 色を生成するジェネレータ
 function* HslPalette(initH, s, l) {
     let count = 0;
     let h = initH;
@@ -142,6 +146,7 @@ function* HslPalette(initH, s, l) {
     }
 }
 
+// 天体表示用クラス
 class Planet {
     constructor(scene, color, radius, name) {
         const geometry = new THREE.SphereGeometry(radius);
@@ -173,6 +178,7 @@ class Planet {
     }
 }
 
+// 天体軌道表示用クラス
 class Orbit {
     static get MAX_POINT_COUNT() { return 100; }
 
@@ -222,15 +228,17 @@ class Orbit {
     }
 }
 
+// シミュレータ管理用
 class SimulationControler {
+    // シミュレーションのサンプル
     simulators = [
         new Simulator(
-            [160, 400],
-            [
+            [160, 400], // 質量
+            [   // 初期位置
                 [-5 / Math.sqrt(2), 0, -5 / Math.sqrt(2)],
                 [5 / Math.sqrt(2), 0, 5 / Math.sqrt(2)],
             ],
-            [
+            [   // 初期速度
                 [-2 / Math.sqrt(2), 0, 2 / Math.sqrt(2)],
                 [3 / Math.sqrt(2), 0, -3 / Math.sqrt(2)],
             ]
@@ -256,6 +264,7 @@ class SimulationControler {
         this.simulator.reset();
 
         for (let i in this.simulator.masses) {
+            // 天体オブジェクトを画面に追加
             this.screen.addPlanet(0.3 * Math.cbrt(this.simulator.masses[i] / Math.min(...this.simulator.masses)), `planet${i}`);
         }
 
@@ -267,6 +276,7 @@ class SimulationControler {
 
         if (this.simulator !== undefined) {
             for (let i in this.simulator.masses) {
+                // 天体オブジェクトを画面から削除
                 this.screen.removePlanet();
             }
         }
@@ -283,4 +293,9 @@ class SimulationControler {
 }
 
 const screen = new Screen(960, 540);
-screen.update();
+
+function tick() {
+    screen.update();
+    requestAnimationFrame(tick);
+}
+tick();
