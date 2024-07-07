@@ -45,6 +45,7 @@ class Screen {
 
         // シーンに表示する天体
         this.planets = [];
+        this.planetPalette = HslPalette(60, 100, 60);   // 天体の色を生成するジェネレータ
 
         // シミュレーション
         this.simulationControler = new SimulationControler(this);
@@ -52,19 +53,17 @@ class Screen {
         // 入力イベント
         this.canvas.addEventListener('pointermove', (e) => { this.onPointerMove(e); });
         for (let i = 0; i < 3; i++) {
-            document.querySelector(`#sample${i}`).addEventListener('click', (e) => { this.simulationControler.end(); this.simulationControler.start(i); });
+            document.querySelector(`#sample${i}`).addEventListener('click', (e) => { this.switchSimulation(i); });
         }
         document.querySelector('#pauseAndRestart').addEventListener('click', (e) => { this.simulationControler.pauseAndRestart(); });
+
+        this.switchSimulation(0);
     }
 
-    addPlanet = (() => {
-        const palette = HslPalette(40, 100, 60);
-
-        return (size, name) => {
-            this.planets.push(new Planet(this.scene, palette.next()['value'], size, name));
-        }
-    })();
-
+    addPlanet(size, name) {
+        this.planets.push(new Planet(this.scene, this.planetPalette.next()['value'], size, name));
+    }
+ 
     removePlanet() {
         const planet = this.planets.shift();
         planet.removeFromScene(this.scene);
@@ -83,7 +82,13 @@ class Screen {
     
         requestAnimationFrame(this.update.bind(this));
     }
-    
+
+    switchSimulation(simulatorId) {        
+        this.simulationControler.end();
+        this.planetPalette = HslPalette(60, 100, 60);
+        this.simulationControler.start(simulatorId);
+    }
+
     onPointerMove(event) {
         if (!event.isPrimary) { return; }
         
@@ -244,7 +249,6 @@ class SimulationControler {
 
     constructor(screen) {
         this.screen = screen;
-        this.start(0);
     }
 
     start(simulatorId) {
@@ -261,8 +265,10 @@ class SimulationControler {
     end() {
         this.isRunning = false;
 
-        for (let i in this.simulator.masses) {
-            this.screen.removePlanet();
+        if (this.simulator !== undefined) {
+            for (let i in this.simulator.masses) {
+                this.screen.removePlanet();
+            }
         }
     }
 
