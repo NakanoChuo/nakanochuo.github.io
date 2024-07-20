@@ -7,6 +7,11 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { Simulator } from "./scripts/gravity_simulator.js";
 
 class Screen {
+    static get INITIAL_OUTLINE_STRENGTH()   { return 3; }
+    static get INITIAL_OUTLINE_COLOR()      { return 0xffffff; }
+    static get CLICKED_OUTLINE_STRENGTH()   { return 20; }
+    static get CLICKED_OUTLINE_COLOR()      { return 0xffa000; }
+
     constructor(width, height) {
         this.canvas = document.querySelector('#myCanvas');
         this.width = width;
@@ -33,9 +38,19 @@ class Screen {
 
         this.composer = new EffectComposer(this.renderer);
         this.renderPass = new RenderPass(this.scene, this.camera);
-        this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
         this.composer.addPass(this.renderPass);
-        this.composer.addPass(this.outlinePass);
+
+        // カーソルが上にあるオブジェクトのアウトラインを表示する
+        this.pointingOutlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
+        this.pointingOutlinePass.edgeStrength = Screen.INITIAL_OUTLINE_STRENGTH;
+        this.pointingOutlinePass.visibleEdgeColor.set(Screen.INITIAL_OUTLINE_COLOR);
+        this.composer.addPass(this.pointingOutlinePass);
+
+        // クリックされたオブジェクトのアウトラインを表示する
+        this.clickedOutlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
+        this.clickedOutlinePass.edgeStrength = Screen.CLICKED_OUTLINE_STRENGTH;
+        this.clickedOutlinePass.visibleEdgeColor.set(Screen.CLICKED_OUTLINE_COLOR);
+        this.composer.addPass(this.clickedOutlinePass);
 
         // グリッドの表示
         this.grid = new THREE.GridHelper(20, 10);   // 全体のサイズとマス数
@@ -50,8 +65,17 @@ class Screen {
         // シミュレーション
         this.simulationControler = new SimulationControler(this);
 
+        // アウトラインを表示するオブジェクト
+        this.pointingObject = undefined;    // カーソルが上にあるオブジェクト
+        this.clickedObject = undefined;     // クリックされたオブジェクト
+        this.clickingObject = undefined;    // クリック中のオブジェクト
+
         // 入力イベント
-        this.canvas.addEventListener('pointermove', (e) => { this.onPointerMove(e); }); // 画面上でポインタを動かす
+        this.canvas.addEventListener('pointermove', (e) => { this.onPointerMove(e); });
+        this.canvas.addEventListener('pointerout', (e) => { this.onPointerOutOrCancel(e); });
+        this.canvas.addEventListener('pointercancel', (e) => { this.onPointerOutOrCancel(e); });
+        this.canvas.addEventListener('pointerdown', (e) => { this.onPointerDown(e); });
+        this.canvas.addEventListener('pointerup', (e) => { this.onPointerUp(e); });
         for (let i = 0; i < 3; i++) {
             document.querySelector(`#sample${i}`).addEventListener('click', (e) => { this.switchSimulation(i); });  // シミュレーションのサンプルの切り替えボタン
         }
@@ -77,9 +101,33 @@ class Screen {
                 this.planets[i].setPosition(positions[i]);
             }
         }
-    
+
+        this.setOutlinePass();
+
         this.controls.update();
         this.composer.render();
+    }
+
+    // アウトラインを表示する天体を設定する
+    setOutlinePass() {
+        if (this.mouseX === undefined || this.mouseY === undefined) {
+            this.pointingObject = undefined;
+            return;
+        }
+
+        const intersectedPlanet = this.checkPlanetIntersection(this.mouseX, this.mouseY);
+        this.pointingObject = intersectedPlanet;
+
+        if (this.clickedObject !== undefined) {
+            this.clickedOutlinePass.selectedObjects = [this.clickedObject];
+        } else {
+            this.clickedOutlinePass.selectedObjects = [];
+        }
+        if (this.pointingObject !== undefined && this.pointingObject !== this.clickedObject) {
+            this.pointingOutlinePass.selectedObjects = [this.pointingObject];
+        } else {
+            this.pointingOutlinePass.selectedObjects = [];
+        }
     }
 
     // シミュレーションのサンプルの切り替え
@@ -89,24 +137,53 @@ class Screen {
         this.simulationControler.start(simulatorId);
     }
 
-    onPointerMove(event) {
-        if (!event.isPrimary) { return; }
-        
+    // マウスカーソル or タッチした位置を保存
+    setMouseXY(event) {
         const element = event.currentTarget;
-        
+
         // canvas要素上のXY座標
         const x = event.clientX - element.offsetLeft;
         const y = event.clientY - element.offsetTop;
-        
+
         // canvas要素の幅・高さ
         const w = element.offsetWidth;
         const h = element.offsetHeight;
 
-        const intersectedPlanet = this.checkPlanetIntersection((x / w) * 2 - 1, -(y / h) * 2 + 1);  // ポインタ上に天体があるか調べる
-        if (intersectedPlanet !== undefined) {  // ポインタ上に天体がある場合
-            console.log(intersectedPlanet.name);
-            this.outlinePass.selectedObjects = [intersectedPlanet]; // アウトラインを表示する
+        // -1～1に変換
+        this.mouseX = (x / w) * 2 - 1;
+        this.mouseY = -(y / h) * 2 + 1;
+    }
+
+    onPointerMove(event) {
+        if (!event.isPrimary) { return; }
+        this.setMouseXY(event);
+    }
+
+    onPointerOutOrCancel(event) {
+        if (!event.isPrimary) { return; }
+        this.mouseX = undefined;
+        this.mouseY = undefined;
+        this.pointingOutlinePass.edgeStrength = Screen.INITIAL_OUTLINE_STRENGTH;
+        this.clickingObject = undefined;
+    }
+
+    onPointerDown(event) {
+        if (!event.isPrimary) { return; }
+        this.setMouseXY(event);
+        const intersectedPlanet = this.checkPlanetIntersection(this.mouseX, this.mouseY);
+        this.clickingObject = intersectedPlanet;
+        this.pointingOutlinePass.edgeStrength = Screen.CLICKED_OUTLINE_STRENGTH;
+    }
+
+    onPointerUp(event) {
+        if (!event.isPrimary) { return; }
+        this.pointingOutlinePass.edgeStrength = Screen.INITIAL_OUTLINE_STRENGTH;
+        this.setMouseXY(event);
+        const intersectedPlanet = this.checkPlanetIntersection(this.mouseX, this.mouseY);
+        if (intersectedPlanet === this.clickingObject) {
+            this.clickedObject = this.clickingObject;
         }
+        this.clickingObject = undefined;
     }
 
     // 画面上のx, y座標上に天体があるかどうか
