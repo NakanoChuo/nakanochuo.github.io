@@ -41,10 +41,10 @@ body {
 .site-nav ul {
   display: flex;
   gap: 1.25rem;
-  margin: 0;
-  padding: 0.45rem 1rem;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0.45rem;
   list-style: none;
-  justify-content: center; /* 中央寄せ */
 }
 .site-nav a {
   color: #fff;
@@ -52,6 +52,11 @@ body {
   text-decoration: none;
   padding: 0.15rem 0.6rem;
   border-radius: 4px;
+}
+
+/* HOME を右に 8rem だけ移動 */
+.site-nav ul li:first-child {
+  margin-left: 8rem;
 }
 
 /* コンテンツ */
