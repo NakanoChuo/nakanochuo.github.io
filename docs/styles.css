@@ -61,8 +61,8 @@ body {
 
 /* コンテンツ */
 .container {
-  max-width: 100%;
-  margin: 0;
+  max-width: 980px;
+  margin: 0 auto;
   padding: 1.2rem 1rem;
 }
 h1 {
@@ -83,6 +83,7 @@ h1 {
   display: block;
 }
 .section-head-body {
+  width: 100%;
   display: block;
 }
 .section-title {
@@ -96,7 +97,7 @@ h1 {
   background: #a4b3e0;
   border-radius: 2px;
   margin: 0 0 1rem 0; /* 左端を見出しテキスト開始位置に揃える */
-  width: calc(100vw - 2rem);
+  width: 100%;
   max-width: none;
 }
 /* メソッド表記用 (白文字 + タグ画像) */
