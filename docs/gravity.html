@@ -2,7 +2,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>万有引力シミュレータ - 物理おぼえがき</title>
+    <title>万有引力シミュレーション - ニチヨウ・ブツリ</title>
+    <link rel="stylesheet" href="styles.css" />
 
     <script type="importmap">
       {
@@ -16,10 +17,49 @@
     <script type="module" src="gravity.js"></script>
   </head>
   <body>
-    <canvas id="myCanvas"></canvas>
-    <button id="sample0">サンプル1</button>
-    <button id="sample1">サンプル2</button>
-    <button id="sample2">サンプル3</button>
-    <button id="pauseAndRestart">停止／再開</button>
+    <header class="site-header" role="banner">
+      <div class="inner">
+        <div class="banner-wrap">
+          <a href="index.html" aria-label="ホームへ">
+            <img
+              src="images/banner.svg"
+              alt="ニチヨウ・ブツリ"
+              class="banner for-pc"
+            />
+            <img
+              src="images/banner_for_mobile.svg"
+              alt="ニチヨウ・ブツリ"
+              class="banner for-mobile"
+            />
+          </a>
+        </div>
+        <nav class="site-nav" aria-label="メインナビゲーション">
+          <ul>
+            <li><a href="index.html">HOME</a></li>
+            <li><a href="about.html">ABOUT</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container" role="main">
+      <div class="section-head">
+        <img
+          src="images/icon1.svg"
+          alt=""
+          class="section-icon"
+          aria-hidden="true"
+        />
+        <div class="section-head-body">
+          <h2 class="section-title">万有引力シミュレーション</h2>
+          <div class="section-rule" aria-hidden="true"></div>
+        </div>
+      </div>
+      <canvas id="myCanvas"></canvas>
+      <button id="sample0">サンプル1</button>
+      <button id="sample1">サンプル2</button>
+      <button id="sample2">サンプル3</button>
+      <button id="pauseAndRestart">停止／再開</button>
+    </main>
   </body>
 </html>
