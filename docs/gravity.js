@@ -16,6 +16,7 @@ class Screen {
         this.canvas = canvas;
         this.width = this.canvas.clientWidth;
         this.height = this.canvas.clientHeight;
+        this.aspect = this.width / this.height;
 
         this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
         this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -24,7 +25,7 @@ class Screen {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000);  // 背景色
 
-        this.camera = new THREE.PerspectiveCamera(45, this.width / this.height, 1, 1000);   // 視野角、アスペクト比、クリッピング開始距離、終了距離
+        this.camera = new THREE.PerspectiveCamera(45, this.aspect, 1, 1000);   // 視野角、アスペクト比、クリッピング開始距離、終了距離
         this.camera.position.set(0, 5, 10); // カメラ位置
         this.camera.lookAt(this.scene.position);    // 注視点を座標原点に
 
@@ -80,6 +81,10 @@ class Screen {
             document.querySelector(`#sample${i}`).addEventListener('click', (e) => { this.switchSimulation(i); });  // シミュレーションのサンプルの切り替えボタン
         }
         document.querySelector('#pauseAndRestart').addEventListener('click', (e) => { this.simulationControler.pauseAndRestart(); });   // シミュレーションの停止／再開ボタン
+
+        window.addEventListener('resize', () => {
+            this.onResize();
+        });
 
         this.switchSimulation(0);
     }
@@ -197,6 +202,13 @@ class Screen {
         if (intersects.length > 0) {
             return intersects[0].object;
         }
+    }
+
+    // 画面リサイズ時
+    onResize() {
+        this.width = document.querySelector('#canvasRef').clientWidth;
+        this.height = this.width / this.aspect;
+        this.renderer.setSize(this.width, this.height);
     }
 }
 
