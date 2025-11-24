@@ -14,20 +14,18 @@ class Screen {
 
     constructor(canvas) {
         this.canvas = canvas;
-        this.width = this.canvas.clientWidth;
-        this.height = this.canvas.clientHeight;
-        this.aspect = this.width / this.height;
 
         this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
         this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.setSize(this.width, this.height);
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000);  // 背景色
 
-        this.camera = new THREE.PerspectiveCamera(45, this.aspect, 1, 1000);   // 視野角、アスペクト比、クリッピング開始距離、終了距離
+        this.camera = new THREE.PerspectiveCamera(45, 1, 1, 1000);   // 視野角、アスペクト比、クリッピング開始距離、終了距離
         this.camera.position.set(0, 5, 10); // カメラ位置
         this.camera.lookAt(this.scene.position);    // 注視点を座標原点に
+
+        this.onResize();
 
         this.controls = new OrbitControls(this.camera, this.canvas);
         this.controls.enableDamping = true;  // 滑らかにカメラコントローラを制御する
@@ -206,9 +204,17 @@ class Screen {
 
     // 画面リサイズ時
     onResize() {
+        if (document.body.clientWidth <= 520) {
+            this.aspect = 1;
+        }
+        else {
+            this.aspect = 2;
+        }
         this.width = document.querySelector('#canvasRef').clientWidth;
         this.height = this.width / this.aspect;
         this.renderer.setSize(this.width, this.height);
+        this.camera.aspect = this.aspect;
+        this.camera.updateProjectionMatrix();
     }
 }
 
