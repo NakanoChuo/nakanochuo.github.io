@@ -12,10 +12,10 @@ class Screen {
     static get CLICKED_OUTLINE_STRENGTH()   { return 20; }
     static get CLICKED_OUTLINE_COLOR()      { return 0xffa000; }
 
-    constructor(width, height) {
-        this.canvas = document.querySelector('#myCanvas');
-        this.width = width;
-        this.height = height;
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.width = this.canvas.clientWidth;
+        this.height = this.canvas.clientHeight;
 
         this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
         this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -369,7 +369,7 @@ class SimulationControler {
     }
 }
 
-const screen = new Screen(960, 540);
+const screen = new Screen(document.querySelector('#myCanvas'));
 
 function tick() {
     screen.update();
