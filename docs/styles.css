@@ -33,6 +33,12 @@ body {
   height: 68px; /* バナーを大きめに */
   display: block;
 }
+.banner.for-pc {
+  display: block !important
+}
+.banner.for-mobile {
+  display: none !important
+}
 .site-nav {
   width: 100%;
   background: #49c8a1; /* ナビをバナー下の緑バーに見せる */
@@ -174,6 +180,24 @@ h1 {
   }
 }
 @media (max-width: 520px) {
+  .banner-wrap {
+    padding: 0.5rem 0.3rem 0.4rem;
+  }
+  .banner {
+    height: 56px;
+  }
+  .banner.for-pc {
+    display: none !important
+  }
+  .banner.for-mobile {
+    display: block !important
+  }
+  .section-head .section-icon {
+    height: 2.2rem;
+  }
+  .section-title {
+    font-size: 1.3rem;
+  }
   .gallery {
     grid-template-columns: 1fr;
   }
