@@ -21,12 +21,11 @@ body {
 }
 .banner-wrap {
   background: #fff;
-  padding: 0.6rem 0.5rem;
+  padding: 0.6rem 0.3rem;
   display: flex;
   align-items: center;
   max-width: 980px;
   margin: 0 auto;
-  padding: 0.6rem 1.5rem;
   width: 100%;
   box-sizing: border-box;
 }
@@ -41,7 +40,7 @@ body {
 .site-nav ul {
   display: flex;
   gap: 1.25rem;
-  max-width: 980px;
+  max-width: 920px;
   margin: 0 auto;
   padding: 0.45rem;
   list-style: none;
@@ -56,12 +55,12 @@ body {
 
 /* HOME を右に 8rem だけ移動 */
 .site-nav ul li:first-child {
-  margin-left: 8rem;
+  margin-left: 5rem;
 }
 
 /* コンテンツ */
 .container {
-  max-width: 980px;
+  max-width: 920px;
   margin: 0 auto;
   padding: 1.2rem 1rem;
 }
@@ -180,7 +179,7 @@ h1 {
     align-items: stretch;
   }
   .site-nav ul {
-    justify-content: center;
+    /* justify-content: center; */
   }
   .gallery {
     grid-template-columns: 1fr;
